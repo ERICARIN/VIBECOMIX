@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        # Включается автоматически, когда в package.json появится скрипт "test".
+        if: ${{ hashFiles('vitest.config.ts', 'vitest.config.mts', 'vitest.config.js') != '' }}
+        run: npm test -- --run
+
+      - name: Fail if application secrets are bundled
+        run: |
+          if grep -rIn "GEMINI_API_KEY" dist 2>/dev/null; then
+            echo "::error::GEMINI_API_KEY попал в клиентский бандл — вынесите вызов на сервер."
+            exit 1
+          fi
