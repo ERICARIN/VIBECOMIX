@@ -30,17 +30,16 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
+      - name: Smoke test (editor boots and works in jsdom)
+        run: npm test
+
       - name: Build
         run: npm run build
 
-      - name: Test
-        # Включается автоматически, когда в package.json появится скрипт "test".
-        if: ${{ hashFiles('vitest.config.ts', 'vitest.config.mts', 'vitest.config.js') != '' }}
-        run: npm test -- --run
-
-      - name: Fail if application secrets are bundled
+      - name: Check the build artifact
         run: |
-          if grep -rIn "GEMINI_API_KEY" dist 2>/dev/null; then
-            echo "::error::GEMINI_API_KEY попал в клиентский бандл — вынесите вызов на сервер."
-            exit 1
-          fi
+          test -f dist/index.html || { echo "::error::dist/index.html не собран"; exit 1; }
+          test -f dist/style.css || { echo "::error::dist/style.css не собран"; exit 1; }
+          test "$(ls dist/js | wc -l)" -eq 8 || { echo "::error::dist/js должен содержать 8 скриптов"; exit 1; }
+          echo "dist готов:"
+          ls -R dist

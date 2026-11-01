@@ -1,11 +1,9 @@
-import tailwindcss from '@tailwindcss/vite';
-import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vite';
 
 // Хосты, с которых разрешено открывать дев-сервер (превью в облачных IDE,
 // Codespaces, удалённые песочницы). Vite >= 6.0.9 отклоняет запросы с
-// неизвестных Host — без этого список превью не работает.
+// неизвестных Host — без этого списка удалённое превью не открывается.
 const extraAllowedHosts = (process.env.VITE_ALLOWED_HOSTS ?? '')
   .split(',')
   .map((host) => host.trim())
@@ -13,7 +11,9 @@ const extraAllowedHosts = (process.env.VITE_ALLOWED_HOSTS ?? '')
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    // Приложение — статический сайт: index.html + style.css + js/*.js
+    // (классические скрипты, общая глобальная область видимости).
+    // Продакшн-сборку делает scripts/build.mjs, Vite здесь — дев-сервер.
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
@@ -22,7 +22,6 @@ export default defineConfig(() => {
     server: {
       host: '0.0.0.0',
       port: Number(process.env.PORT ?? 3000),
-      strictPort: false,
       allowedHosts: [
         'localhost',
         '127.0.0.1',

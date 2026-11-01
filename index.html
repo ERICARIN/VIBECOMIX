@@ -3,15 +3,250 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VIBECOMIX — векторный редактор макетов комиксов</title>
-    <meta
-      name="description"
-      content="Интерактивный векторный редактор панелей комиксов и манги: кастомные формы, нож, кривые Безье, обводка под давлением."
+    <title>VIBECOMIX — Editor</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
     />
-    <meta name="theme-color" content="#0f172a" />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- DIALOG -->
+    <div id="dialog-overlay">
+      <div class="dialog-box">
+        <div class="dialog-logo">
+          <span class="v">VIBE</span><span class="c">COMIX</span>
+        </div>
+        <div class="dialog-sub">Parallax Comic Editor · Новый проект</div>
+        <div class="field-row">
+          <div class="field-group">
+            <div class="field-label">Ширина px</div>
+            <input
+              type="number"
+              id="inp-width"
+              value="800"
+              min="100"
+              max="3000"
+              step="10"
+            />
+          </div>
+          <div class="field-group">
+            <div class="field-label">Высота px</div>
+            <input
+              type="number"
+              id="inp-height"
+              value="1100"
+              min="100"
+              max="4000"
+              step="10"
+            />
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <div class="field-label">
+              Толщина рамки px <small>(0=без)</small>
+            </div>
+            <input
+              type="number"
+              id="inp-border-width"
+              value="12"
+              min="0"
+              max="80"
+            />
+          </div>
+          <div class="field-group">
+            <div class="field-label">Цвет рамки</div>
+            <input type="color" id="inp-border-color" value="#ffffff" />
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <div class="field-label">
+              Толщина обводки фрейма <small>(0=без)</small>
+            </div>
+            <input
+              type="number"
+              id="inp-stroke-width"
+              value="2"
+              min="0"
+              max="20"
+            />
+          </div>
+          <div class="field-group">
+            <div class="field-label">Цвет обводки</div>
+            <input type="color" id="inp-stroke-color" value="#000000" />
+          </div>
+        </div>
+        <div class="field-row" style="margin-bottom: 8px">
+          <div class="field-group">
+            <div class="field-label">Страниц</div>
+            <input type="number" id="inp-pages" value="1" min="1" max="100" />
+          </div>
+          <div class="field-group">
+            <div class="field-label">Фон фреймов</div>
+            <input type="color" id="inp-page-bg" value="#d0cbc4" />
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn-primary" id="btn-create">Создать →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDITOR -->
+    <div id="editor">
+      <div class="topbar">
+        <div class="topbar-logo">
+          <span class="v">VIBE</span><span class="c">COMIX</span>
+        </div>
+        <div class="topbar-info">
+          стр.&nbsp;<b id="page-indicator">1</b>/<b id="page-total">1</b
+          >&nbsp;·&nbsp;
+          <div class="topbar-size">
+            <input
+              type="number"
+              id="tb-w"
+              value="800"
+              min="100"
+              max="6000"
+              step="10"
+            />
+            <span>×</span>
+            <input
+              type="number"
+              id="tb-h"
+              value="1100"
+              min="100"
+              max="8000"
+              step="10"
+            />
+            <button id="btn-apply-size">✓ Стр</button>
+            <button id="btn-apply-all">✓ Все</button>
+          </div>
+          &nbsp;·&nbsp;<span class="topbar-hint"
+            >Зажми перегородку + Колесико = Давление рамки перегородки ·
+            Ctrl+Колесико = Обводка перегородки (SAI pressure) · Shift+Колесико
+            = Рамка листа · Shift+Ctrl+Колесико = Обводка листа</span
+          >
+        </div>
+        <div class="topbar-actions">
+          <button
+            class="topbar-btn"
+            id="btn-undo"
+            style="opacity: 0.4"
+            title="Ctrl+Z"
+          >
+            ↩
+          </button>
+          <button
+            class="topbar-btn"
+            id="btn-redo"
+            style="opacity: 0.4"
+            title="Ctrl+Shift+Z"
+          >
+            ↪
+          </button>
+          <button class="topbar-btn" id="btn-preview-toggle">▶ Превью</button>
+          <button class="topbar-btn" id="btn-export">↓ HTML</button>
+          <button class="topbar-btn confirm" id="btn-confirm">✓ Готово</button>
+        </div>
+      </div>
+      <div class="editor-body">
+        <div class="page-sidebar">
+          <div class="sidebar-header">Страницы</div>
+          <div class="page-list" id="page-list"></div>
+          <button class="sidebar-add-btn" id="btn-add-page">+ страница</button>
+        </div>
+        <div class="canvas-area" id="canvas-area">
+          <div id="canvas-viewport">
+            <div id="canvas-wrapper">
+              <div
+                id="frame-container"
+                style="position: absolute; inset: 0; overflow: visible"
+              ></div>
+              <!-- Page edge handles: all 8 -->
+              <div class="page-edge-handle top" data-dir="n">
+                <div class="peh-inner"></div>
+              </div>
+              <div class="page-edge-handle bottom" data-dir="s">
+                <div class="peh-inner"></div>
+              </div>
+              <div class="page-edge-handle left" data-dir="w">
+                <div class="peh-inner"></div>
+              </div>
+              <div class="page-edge-handle right" data-dir="e">
+                <div class="peh-inner"></div>
+              </div>
+              <div class="page-edge-handle tl" data-dir="nw">
+                <div class="peh-inner"></div>
+              </div>
+              <div class="page-edge-handle tr" data-dir="ne">
+                <div class="peh-inner"></div>
+              </div>
+              <div class="page-edge-handle bl" data-dir="sw">
+                <div class="peh-inner"></div>
+              </div>
+              <div class="page-edge-handle br" data-dir="se">
+                <div class="peh-inner"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PREVIEW -->
+    <div id="preview-overlay">
+      <div class="preview-topbar">
+        <div class="preview-label">
+          <span class="v">VIBE</span><span class="c">COMIX</span> · PREVIEW
+        </div>
+        <div class="preview-actions">
+          <button class="btn-secondary" id="btn-close-preview">
+            ← Редактор
+          </button>
+          <button
+            class="btn-primary"
+            style="padding: 10px 18px; font-size: 10px; width: auto"
+            id="btn-export2"
+          >
+            ↓ Скачать HTML
+          </button>
+        </div>
+      </div>
+      <div
+        id="preview-pages"
+        style="
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 40px;
+          width: 100%;
+        "
+      ></div>
+    </div>
+
+    <input type="file" id="file-input" accept="image/*,.gif" multiple />
+
+    <!--
+  ПОРЯДОК ЗАГРУЗКИ ВАЖЕН:
+  1. state    — данные, undo/redo (ни от чего не зависит)
+  2. dialog   — создание проекта (использует S, mkFrame)
+  3. viewport — канвас, зум, пан, resize (использует S, renderPage, renderSidebar)
+  4. sidebar  — страницы (использует S, renderPage, switchPage)
+  5. dividers — перегородки (использует S, renderPage, canvasScale)
+  6. frames   — рендер фреймов, split, delete (использует S, renderPage, buildLayersPanel)
+  7. layers   — слои, трансформация, загрузка (использует S, renderPage, selectedLayerId)
+  8. preview  — превью и экспорт (использует S)
+-->
+    <script src="js/state.js"></script>
+    <script src="js/dialog.js"></script>
+    <script src="js/viewport.js"></script>
+    <script src="js/sidebar.js"></script>
+    <script src="js/dividers.js"></script>
+    <script src="js/frames.js"></script>
+    <script src="js/layers.js"></script>
+    <script src="js/preview.js"></script>
   </body>
 </html>
